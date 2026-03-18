@@ -73,6 +73,18 @@ Model acc = 0.6399 within1 = 0.9364 MAE = 0.4412
 Persistence acc=0.6290 within1=0.9276 MAE=0.4644
 Change-rows accuracy: model=0.0956 | persistence=0.0000
 
+NEW INFO, checking if the dataset inbalance was preventing incidents from impacting accuracy
+{'Accident': 0, 'Heavy Traffic': 1, 'None': 2, 'Obstacle': 3, 'Road Block': 4, 'Roadwork': 5, 'Unattended Vehicle': 6, 'Vehicle breakdown': 7}
+First Record (SG Time): 2026-01-12 21:40:00+08:00
+Last Record (SG Time): 2026-02-10 05:55:00+08:00
+Total Days of Data: 28
+has_incident
+0    13682179
+1       15510
+Name: count, dtype: int64
+Incident rate: 0.0011
+Train size: 13697689
+Incident rows in train: 15510
 
 
 --- ISOLATED INCIDENT PERFORMANCE ---
@@ -84,3 +96,237 @@ Persistence acc=0.6290 within1=0.9276 MAE=0.4644
 Change-rows accuracy: model=0.1281 | persistence=0.0000
 
 
+
+WITH 21 days incident + better incident mapping
+First Record (SG Time): 2026-01-12 21:40:00+08:00
+Last Record (SG Time): 2026-02-10 05:55:00+08:00
+Total Days of Data: 28
+has_incident
+0    13682179
+1       15510
+Name: count, dtype: int64
+Incident rate: 0.0011
+Train size: 13697689
+Incident rows in train: 15510
+
+--- CHECK ISOLATED INCIDENT PERFORMANCE ---
+Total incident snapshots in test set: 5356
+Accuracy DURING incidents: Model = 0.6102 | Persistence = 0.6184
+
+Results:
+Model acc = 0.6415 within1 = 0.9366 MAE = 0.4393
+Persistence acc=0.6290 within1=0.9276 MAE=0.4644
+Change-rows accuracy: model=0.1016 | persistence=0.0000
+
+
+With incident sampling
+> ISOLATED INCIDENT PERFORMANCE
+Incident rows in test: 4311
+Acc during incidents: model=0.5725 | persistence=0.6149
+
+Overall acc=0.6411 (base=0.6275)  within1=0.9401  MAE=0.4346
+Change-row acc: model=0.1246
+
+After completed removing lat lon features just to see if its causing model to ignore incidents
+--- CHECK ISOLATED INCIDENT PERFORMANCE ---
+Incident rows in test: 4311
+Acc during incidents: model=0.5688 | persistence=0.6149
+
+Overall acc=0.6386 (base=0.6275)  within1=0.9392  MAE=0.4381
+Change-row acc: model=0.0885
+
+
+WITH NEW Incidents_nearby but without lat lon
+--- CHECK ISOLATED INCIDENT PERFORMANCE ---
+Incident rows in test: 216438
+Acc during incidents: model=0.6615 | persistence=0.6560
+
+Overall acc=0.6387 (base=0.6275)  within1=0.9393  MAE=0.4378
+Change-row acc: model=0.0897
+incident_nearby
+0    41034072
+1      216438
+Name: count, dtype: int64
+incident_nearby rate in test: 0.0052469169472086526
+
+
+
+
+--- CHECK ISOLATED INCIDENT PERFORMANCE ---
+Incident rows in test: 216438
+Acc during incidents: model=0.6615 | persistence=0.6560
+
+Overall acc=0.6387 (base=0.6275)  within1=0.9393  MAE=0.4378
+Change-row acc: model=0.0897
+incident_nearby
+0    41034072
+1      216438
+Name: count, dtype: int64
+incident_nearby rate in test: 0.0052469169472086526
+Change rate overall: 0.37249655822437105
+Change rate on incident_nearby rows: 0.34398765466322917
+
+
+Updated incident_nearby with lat lon, and 8.0 weights
+Results:
+Overall acc=0.6430 within1=0.9411 MAE=0.4313
+Persistence acc=0.6275 within1=0.9300 MAE=0.4620
+Change-row acc: model=0.1130
+IncidentNearby acc: model=0.6603 | persistence=0.6560 | rows=216438
+Change rate overall: 0.37249655822437105
+Change rate on incident_nearby rows: 0.34398765466322917
+
+
+
+
+Updated with 5.0 weights
+Results:
+Overall acc=0.6432 within1=0.9411 MAE=0.4312
+Persistence acc=0.6275 within1=0.9300 MAE=0.4620
+Change-row acc: model=0.1128
+IncidentNearby acc: model=0.6610 | persistence=0.6560 | rows=216438
+Change rate overall: 0.37249655822437105
+Change rate on incident_nearby rows: 0.34398765466322917
+
+
+Observation: After engineering multiple geospatial and incidents features, there is only a slight improvement in accuracy over the persistent baseline. In Singapore traffic, the persistent baseline may already offer a very strong prediction power. It might not be a feature gap issue, but something to do with how change in speedbands occur. As after a severe incident, speedbands may drop drastically quickly and speedbands may remain congested for a time period, hence it stabilizes. So, the model cannot pick this up and treat it as the Speedbands is staying the same. 
+
+PIVOTING STRATEGIES
+Now, change to binary classification. We are trying to predict if the speedbands change in the future, or no change
+
+features = [
+    "sb","sb_tm5","sb_tm10","sb_tm15",
+    "delta_0_5","delta_5_10","delta_10_15",
+    "mid_lat", "mid_lon",
+
+
+    "road_category","is_weekend","is_peak",
+    "incident_nearby","mins_since_nearby_start",
+    "nearby_accident","nearby_roadwork","nearby_breakdown"
+]
+
+Train incident_nearby rate: 0.055303874139937766 rows: 873103
+Test incident_nearby rate: 0.005292362962995399 rows: 217552
+
+
+Threshold 0.20: Recall=0.9126, Precision=0.4513, F1=0.6039
+Threshold 0.25: Recall=0.8047, Precision=0.4952, F1=0.6132
+Threshold 0.30: Recall=0.7085, Precision=0.5296, F1=0.6062
+Threshold 0.35: Recall=0.6565, Precision=0.5480, F1=0.5973
+Threshold 0.40: Recall=0.5990, Precision=0.5664, F1=0.5822
+Threshold 0.45: Recall=0.4899, Precision=0.5989, F1=0.5390
+Threshold 0.50: Recall=0.3793, Precision=0.6321, F1=0.4741
+
+Overall Results:
+Model    acc=0.6865 prec=0.6321 rec=0.3793 f1=0.4741
+Baseline acc=0.6274 prec=0.0000 rec=0.0000 f1=0.0000
+Change rate overall: 0.37256496373590925
+True change rows: 15314946
+
+IncidentNearby Results:
+Model    acc=0.6972 prec=0.6052 rec=0.3428 f1=0.4377
+Baseline acc=0.6562 prec=0.0000 rec=0.0000 f1=0.0000
+Hit rate on true change rows: 0.3792734234910133
+
+Added dow_sg and hour_sg
+Threshold 0.20: Recall=0.9406, Precision=0.4352, F1=0.5951
+Threshold 0.25: Recall=0.8885, Precision=0.4599, F1=0.6061
+Threshold 0.30: Recall=0.8051, Precision=0.4927, F1=0.6113
+Threshold 0.35: Recall=0.7143, Precision=0.5269, F1=0.6064
+Threshold 0.40: Recall=0.6256, Precision=0.5567, F1=0.5892
+Threshold 0.45: Recall=0.5289, Precision=0.5851, F1=0.5556
+Threshold 0.50: Recall=0.4241, Precision=0.6160, F1=0.5024
+
+Overall Results:
+Model    acc=0.6870 prec=0.6160 rec=0.4241 f1=0.5024
+Baseline acc=0.6274 prec=0.0000 rec=0.0000 f1=0.0000
+Change rate overall: 0.37256496373590925
+True change rows: 15314946
+
+IncidentNearby Results:
+Model    acc=0.6944 prec=0.5847 rec=0.3837 f1=0.4634
+Baseline acc=0.6562 prec=0.0000 rec=0.0000 f1=0.0000
+Hit rate on true change rows: 0.4241424031139254
+
+What if I remove lat, lon, hour, dow?
+Threshold 0.20: Recall=0.9010, Precision=0.4429, F1=0.5939
+Threshold 0.25: Recall=0.7867, Precision=0.4925, F1=0.6058
+Threshold 0.30: Recall=0.6944, Precision=0.5286, F1=0.6003
+Threshold 0.35: Recall=0.6536, Precision=0.5460, F1=0.5949
+Threshold 0.40: Recall=0.6025, Precision=0.5626, F1=0.5819
+Threshold 0.45: Recall=0.4839, Precision=0.5957, F1=0.5340
+Threshold 0.50: Recall=0.3806, Precision=0.6263, F1=0.4735
+
+Overall Results:
+Model    acc=0.6846 prec=0.6263 rec=0.3806 f1=0.4735
+Baseline acc=0.6274 prec=0.0000 rec=0.0000 f1=0.0000
+Change rate overall: 0.37256496373590925
+True change rows: 15314946
+
+IncidentNearby Results:
+Model    acc=0.6968 prec=0.5987 rec=0.3582 f1=0.4482
+Baseline acc=0.6562 prec=0.0000 rec=0.0000 f1=0.0000
+Hit rate on true change rows: 0.38059997077364816
+
+
+ADDED RAINFALL 
+Threshold 0.20: Recall=0.9151, Precision=0.4508, F1=0.6040
+Threshold 0.25: Recall=0.8070, Precision=0.4943, F1=0.6131
+Threshold 0.30: Recall=0.7090, Precision=0.5296, F1=0.6063
+Threshold 0.35: Recall=0.6588, Precision=0.5470, F1=0.5977
+Threshold 0.40: Recall=0.6014, Precision=0.5652, F1=0.5828
+Threshold 0.45: Recall=0.5028, Precision=0.5947, F1=0.5449
+Threshold 0.50: Recall=0.3881, Precision=0.6286, F1=0.4799
+
+Overall Results:
+Model    acc=0.6866 prec=0.6286 rec=0.3881 f1=0.4799
+Baseline acc=0.6274 prec=0.0000 rec=0.0000 f1=0.0000
+Change rate overall: 0.37256496373590925
+True change rows: 15314946
+
+IncidentNearby Results:
+Model    acc=0.6970 prec=0.6063 rec=0.3387 f1=0.4346
+Baseline acc=0.6562 prec=0.0000 rec=0.0000 f1=0.0000
+Hit rate on true change rows: 0.3880854036311979
+
+ADDED DISTANCE PROXY AND ACCELERATION
+Threshold 0.20: Recall=0.9157, Precision=0.4586, F1=0.6111
+Threshold 0.25: Recall=0.8252, Precision=0.4966, F1=0.6201
+Threshold 0.30: Recall=0.7202, Precision=0.5314, F1=0.6115
+Threshold 0.35: Recall=0.6602, Precision=0.5514, F1=0.6009
+Threshold 0.40: Recall=0.6045, Precision=0.5691, F1=0.5862
+Threshold 0.45: Recall=0.5109, Precision=0.5972, F1=0.5507
+Threshold 0.50: Recall=0.3928, Precision=0.6324, F1=0.4846
+
+Overall Results:
+Model    acc=0.6591 prec=0.5314 rec=0.7202 f1=0.6115
+Baseline acc=0.6274 prec=0.0000 rec=0.0000 f1=0.0000
+Change rate overall: 0.37256496373590925
+True change rows: 15314946
+Persistence Baseline F1: 0.3871
+
+IncidentNearby Results:
+Model    acc=0.6563 prec=0.5002 rec=0.7129 f1=0.5879
+Baseline acc=0.6562 prec=0.0000 rec=0.0000 f1=0.0000
+Hit rate on true change rows: 0.7201503681436422
+
+Decrease weight to 2.0
+Threshold 0.20: Recall=0.9167, Precision=0.4589, F1=0.6116
+Threshold 0.25: Recall=0.8269, Precision=0.4968, F1=0.6207
+Threshold 0.30: Recall=0.7213, Precision=0.5317, F1=0.6121
+Threshold 0.35: Recall=0.6616, Precision=0.5515, F1=0.6016
+Threshold 0.40: Recall=0.6044, Precision=0.5694, F1=0.5864
+Threshold 0.45: Recall=0.5131, Precision=0.5970, F1=0.5519
+Threshold 0.50: Recall=0.3952, Precision=0.6321, F1=0.4863
+
+Overall Results:
+Model    acc=0.6595 prec=0.5317 rec=0.7213 f1=0.6121
+Baseline acc=0.6274 prec=0.0000 rec=0.0000 f1=0.0000
+Change rate overall: 0.37256496373590925
+True change rows: 15314946
+Persistence Baseline F1: 0.3871
+
+IncidentNearby Results:
+Model    acc=0.6547 prec=0.4985 rec=0.7170 f1=0.5881
+Baseline acc=0.6562 prec=0.0000 rec=0.0000 f1=0.0000
+Hit rate on true change rows: 0.7212712339958626
