@@ -1,3 +1,6 @@
+
+Moved ML to https://github.com/Jiarong90/Traffic-Forecast-ML
+
 # Recommended Setup (Windows)
 
 ## 1) Create and activate venv
