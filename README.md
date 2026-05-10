@@ -1,4 +1,6 @@
 
+Moved full project to https://github.com/Jiarong90/Traffic-Forecast-Proj
+
 Moved ML to https://github.com/Jiarong90/Traffic-Forecast-ML
 
 # Recommended Setup (Windows)
